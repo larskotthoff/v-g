@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Gallery</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <style type="text/css"> 
+body {
+    font: 12px Open Sans, Verdana, Palatino, Helvetica, sans;
+    background: black;
+    overflow: hidden;
+}
+img {
+    display: block;
+    margin: auto;
+    padding: 5px;
+    left: 10%;
+    right: 10%;
+    top: 10%;
+    bottom: 10%;
+    background-image: url('spinner.gif');
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center;
+}
+#large {
+    background-image: url('spinner.gif');
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.active {
+    outline: 2px solid yellow;
+}
+        </style>
+    </head>
+
+    <body>
+        <div id="large" style="position: absolute; top: 10px;"></div>
+        <div id="strip" style="position: absolute; right: 0px; margin: 5px; height: 100%; width: 250px;"></div>
+        <script type="text/javascript">
+        $(document).ready(function () {
+            var json = null,
+                idx = 0,
+                t = 500;
+
+            d3.select("#large")
+              .style("height", (window.innerHeight - 20) + "px")
+              .style("width", (window.innerWidth - 250 - 20) + "px");
+
+            function repos() {
+                d3.select("#strip")
+                  .transition().duration(t)
+                  .style("top", function() {
+                      var el = d3.select(".active")[0][0],
+                          mid = window.innerHeight/2,
+                          midp = el.offsetTop + el.offsetHeight/2,
+                          ret = (mid - midp) + "px";
+                      return ret;
+                  });
+            }
+
+            function setImgAttrs(selection) {
+                selection.classed("active", function(d, i) { return i == idx; })
+                    .on("load", function(d, i) {
+                        if(idx == i) { repos(); }
+                    })
+                    .attr("src", function(d) { return d.media.m; })
+                    .on("click", function(d, i) { idx = i; update(); });
+            }
+
+            function update() {
+                var imgs = d3.select("#strip").selectAll("img")
+                             .data(json.items, function(d) { return d.link; });
+                imgs.enter()
+                    .append("img")
+                    .call(setImgAttrs);
+                imgs.call(setImgAttrs);
+
+                d3.select("#large")
+                    .style("opacity", 1)
+                    .transition().duration(t)
+                    .style("opacity", 0)
+                    .transition().duration(t)
+                    .style("opacity", 1);
+                setTimeout(function() {
+                        d3.select("#large")
+                          .style("background-size", "contain")
+                          .style("background-image", "url(" + json.items[idx].media.m.replace("_m.jpg", "_b.jpg") + ")");
+                    } ,t);
+
+                repos();
+            }
+
+            $.getJSON("http://api.flickr.com/services/feeds/photos_public.gne?id=94486791@N05&format=json&jsoncallback=?", function(newJson) {
+                json = newJson;
+                update();
+            });
+
+            function onKeyDown(e) {
+                if(idx < json.items.length - 1 && (e.keyCode == 39 || e.keyCode == 40)) {
+                    idx += 1;
+                    update();
+                }
+                if(idx > 0 && (e.keyCode == 37 || e.keyCode == 38)) {
+                    idx -= 1;
+                    update();
+                }
+            }
+            document.addEventListener('keydown', onKeyDown, false);
+        });
+        </script>
+    </body>
+</html>
